@@ -7,10 +7,13 @@ let lastTime = 0;
 
 
 class Tetrimino {
-  constructor(shape, color) {
-    this.shape = shape;
+  constructor(shape, color, game) {
+    this.shapes = shape;
     this.color = color;
     this.position = { x: Math.floor(cols / 2) - 1, y: 0 };
+    this.rotationIndex = 0;
+    this.shape = this.shapes[this.rotationIndex];
+    this.game = game;
   }
 
   draw() {
@@ -35,56 +38,175 @@ class Tetrimino {
       });
     });
   }
-
+  
   move(dirX, dirY) {
     this.position.x += dirX;
     this.position.y += dirY;
   }
 
   rotate() {
-    const newShape = this.shape[0].map((_, i) => this.shape.map(row => row[i])).reverse();
-    this.shape = newShape;
+    this.rotationIndex = (this.rotationIndex + 1) % this.shapes.length;
+    const newShape = this.shapes[this.rotationIndex];
+    if (this.isValidMove(this.position, newShape)) {
+      this.shape = newShape;
+    } else {
+      this.rotationIndex = (this.rotationIndex - 1 + this.shapes.length) % this.shapes.length;
+    }
   }
+  isValidMove(position, shape) {
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        // Check if the cell is filled
+        if (shape[y][x]) {
+          // Check if the move is within the game board horizontally
+          if (position.x + x < 0 || position.x + x >= cols) {
+            return false;
+          }
+          // Check if the move is within the game board vertically
+          if (position.y + y < 0 || position.y + y >= rows) {
+            return false;
+          }
+          // Check if the move collides with existing blocks on the board
+          if (this.game.board[position.y + y][position.x + x]) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
 }
 
 const shapes = [
   [
     [
-      [1, 1, 1, 1],
       [0, 0, 0, 0],
+      [1, 1, 1, 1],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
     ],
     [
-      [1, 0, 0, 0],
-      [1, 0, 0, 0],
-      [1, 0, 0, 0],
-      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
     ],
   ],
   [
     [
-      [1, 0, 0],
-      [1, 1, 1],
-      [0, 0, 0],
+      [0, 0, 0, 0],
+      [1, 1, 1, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 0],
     ],
     [
-      [1, 1, 0],
-      [1, 0, 0],
-      [1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+      [1, 1, 0, 0],
+      [0, 0, 0, 0],
     ],
     [
-      [1, 1, 1],
-      [0, 0, 1],
-      [0, 0, 0],
+      [1, 0, 0, 0],
+      [1, 1, 1, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
     ],
     [
-      [0, 1, 0],
-      [0, 1, 0],
-      [1, 1, 0],
+      [0, 1, 1, 0],
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
     ],
   ],
-  // ... other shapes here ...
+  [
+    [
+      [0, 0, 0, 0],
+      [0, 0, 1, 0],
+      [1, 1, 1, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 1, 1, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 0, 0, 0],
+      [1, 1, 1, 0],
+      [1, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [1, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+  ],
+  [
+    [
+      [0, 0, 0, 0],
+      [0, 1, 1, 0],
+      [0, 1, 1, 0],
+      [0, 0, 0, 0],
+    ],
+  ],
+  [
+    [
+      [0, 0, 0, 0],
+      [0, 1, 1, 0],
+      [1, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 0, 0],
+      [0, 1, 1, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 0],
+    ],
+  ],
+  [
+    [
+      [0, 0, 0, 0],
+      [1, 1, 1, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 0, 0],
+      [1, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 0, 0, 0],
+      [0, 1, 0, 0],
+      [1, 1, 1, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 0, 0],
+      [0, 1, 1, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+  ],
+  [
+    [
+      [0, 0, 0, 0],
+      [1, 1, 0, 0],
+      [0, 1, 1, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 0, 0],
+      [1, 1, 0, 0],
+      [1, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+  ],
 ];
 
         
@@ -107,7 +229,7 @@ class Game {
   createRandomTetrimino() {
     const shapeIndex = Math.floor(Math.random() * shapes.length);
     const color = `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, 1)`;
-    return new Tetrimino(shapes[shapeIndex], color);
+    return new Tetrimino(shapes[shapeIndex], color, this); // Pass the Game instance to the Tetrimino
   }
 
   moveTetrimino(dirX, dirY) {
@@ -247,6 +369,11 @@ class Game {
     }
   }
 
+  drawLinesCleared() {
+    const linesClearedElement = document.getElementById("linesCleared");
+    linesClearedElement.textContent = `Lines Cleared: ${this.linesCleared}`;
+  }
+
   draw() {
     // Clear the canvas
     ctx.fillStyle = "black";
@@ -269,6 +396,8 @@ class Game {
     
     // Draw the score and lines cleared
     this.drawScore();
+    // Draw the lines cleared
+    this.drawLinesCleared();
   }
 
 }

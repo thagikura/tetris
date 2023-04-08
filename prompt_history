@@ -1586,3 +1586,292 @@ With this change, the tetriminos should now be drawn correctly as their intended
 
 Takeshi Hagikura
 Still tetraminos are drawn as rectangles.
+
+Still tetriminos are drawn as rectangles. Can you modify the draw method in the Tetrimino class?
+
+I apologize for the confusion. I found an issue in the rotate method of the Tetrimino class. The rotation logic is causing the shape to become distorted. Here is the updated version of the rotate method that should fix the issue:
+
+javascript
+Copy code
+  rotate() {
+    const newShape = this.shape[0].map((_, i) =>
+      this.shape.map(row => row[i])
+    ).reverse();
+
+    if (this.isValidMove(this.position, newShape)) {
+      this.shape = newShape;
+    }
+  }
+You will also need to add an isValidMove method to the Tetrimino class to check if the rotation is valid:
+
+javascript
+Copy code
+  isValidMove(position, shape) {
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        if (shape[y][x]) {
+          if (position.x + x < 0 || position.x + x >= cols) {
+            return false;
+          }
+          if (position.y + y < 0 || position.y + y >= rows) {
+            return false;
+          }
+          if (game.board[position.y + y][position.x + x]) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+Please replace the rotate method in the Tetrimino class and add the isValidMove method to it. This should fix the issue with the tetrimino shapes being drawn as rectangles.
+
+
+
+
+Takeshi Hagikura
+I think the `draw` method in the Tetrimino class doesn't take the shape's index into account when filling the canvas. Thus, all tetriminos are drawn as rectangles
+You are correct. My previous response missed the issue in the draw method of the Tetrimino class. I apologize for the confusion. Here's the corrected draw method that should fix the problem:
+
+javascript
+Copy code
+  draw() {
+    this.shape.forEach((row, y) => {
+      row.forEach((value, x) => {
+        if (value) {
+          ctx.fillStyle = this.color;
+          ctx.fillRect(
+            (this.position.x + x) * scale,
+            (this.position.y + y) * scale,
+            scale,
+            scale
+          );
+          ctx.strokeStyle = "black";
+          ctx.strokeRect(
+            (this.position.x + x) * scale,
+            (this.position.y + y) * scale,
+            scale,
+            scale
+          );
+        }
+      });
+    });
+  }
+Please replace the draw method in the Tetrimino class with this updated version. This should fix the issue with the tetrimino shapes being drawn as rectangles.
+
+
+
+
+Takeshi Hagikura
+Shouldn't Tetrimino class have additional field that holds the rotated position within the shape?
+Current `draw` method doesn't take the rotated position into account
+You're right. The Tetrimino class needs an additional field to hold the rotation index, which determines the current rotation of the tetrimino. Let's modify the class and the rotate method to account for the rotation index. We'll also update the draw method to use the correct rotation of the shape.
+
+javascript
+Copy code
+class Tetrimino {
+  constructor(shape, color) {
+    this.shapes = shape;
+    this.color = color;
+    this.position = { x: Math.floor(cols / 2) - 1, y: 0 };
+    this.rotationIndex = 0;
+    this.shape = this.shapes[this.rotationIndex];
+  }
+
+  draw() {
+    this.shape.forEach((row, y) => {
+      row.forEach((value, x) => {
+        if (value) {
+          ctx.fillStyle = this.color;
+          ctx.fillRect(
+            (this.position.x + x) * scale,
+            (this.position.y + y) * scale,
+            scale,
+            scale
+          );
+          ctx.strokeStyle = "black";
+          ctx.strokeRect(
+            (this.position.x + x) * scale,
+            (this.position.y + y) * scale,
+            scale,
+            scale
+          );
+        }
+      });
+    });
+  }
+
+  rotate() {
+    this.rotationIndex = (this.rotationIndex + 1) % this.shapes.length;
+    const newShape = this.shapes[this.rotationIndex];
+    if (this.isValidMove(this.position, newShape)) {
+      this.shape = newShape;
+    } else {
+      this.rotationIndex = (this.rotationIndex - 1 + this.shapes.length) % this.shapes.length;
+    }
+  }
+
+  // Add isValidMove method to the Tetrimino class.
+  isValidMove(position, shape) {
+    // The same logic as in the Game class.
+  }
+}
+Now, the Tetrimino class keeps track of the rotation index, and the draw method uses the current rotation of the shape. Additionally, the rotate method updates the rotation index and checks for valid moves using the new rotation. Please update the Tetrimino class with these changes and ensure the isValidMove method is correctly implemented.
+
+
+
+
+Takeshi Hagikura
+Can you write full code of isValidMove in the Tetrimino class?
+Certainly! To implement the isValidMove method in the Tetrimino class, you'll need to pass a reference to the Game class instance to the Tetrimino class. This will allow the Tetrimino class to access the game board for collision checking. Here's the updated code:
+
+javascript
+Copy code
+class Tetrimino {
+  constructor(shape, color, game) {
+    this.shapes = shape;
+    this.color = color;
+    this.position = { x: Math.floor(cols / 2) - 1, y: 0 };
+    this.rotationIndex = 0;
+    this.shape = this.shapes[this.rotationIndex];
+    this.game = game;
+  }
+
+  // ...
+
+  isValidMove(position, shape) {
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        // Check if the cell is filled
+        if (shape[y][x]) {
+          // Check if the move is within the game board horizontally
+          if (position.x + x < 0 || position.x + x >= cols) {
+            return false;
+          }
+          // Check if the move is within the game board vertically
+          if (position.y + y < 0 || position.y + y >= rows) {
+            return false;
+          }
+          // Check if the move collides with existing blocks on the board
+          if (this.game.board[position.y + y][position.x + x]) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+}
+
+// ...
+
+class Game {
+  // ...
+
+  createRandomTetrimino() {
+    const shapeIndex = Math.floor(Math.random() * shapes.length);
+    const color = `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, 1)`;
+    return new Tetrimino(shapes[shapeIndex], color, this); // Pass the Game instance to the Tetrimino
+  }
+
+  // ...
+}
+Make sure to update the Tetrimino constructor to accept the game parameter and to pass the Game instance to the Tetrimino class when creating a new tetrimino in the createRandomTetrimino method.
+
+
+
+
+Takeshi Hagikura
+LinesCleared field isn't updated. Can you fix that?
+It looks like the linesCleared field is updated in the clearLines method. However, it might be a good idea to move the update of the linesCleared field to the Game class constructor, so that it's initialized when a new Game instance is created. Here's the updated code:
+
+javascript
+Copy code
+class Game {
+  constructor() {
+    this.board = this.createBoard();
+    this.score = 0;
+    this.level = 1;
+    this.linesCleared = 0; // Initialize the linesCleared field here
+    this.dropCounter = 0;
+    this.dropInterval = 1000;
+    this.currentTetrimino = this.createRandomTetrimino();
+    this.nextTetrimino = this.createRandomTetrimino();
+  }
+
+  // ...
+
+  clearLines() {
+    let linesCleared = 0;
+
+    for (let y = 0; y < rows; y++) {
+      const isLineFull = this.board[y].every(cell => cell !== 0);
+
+      if (isLineFull) {
+        linesCleared++;
+
+        // Remove the full line
+        this.board.splice(y, 1);
+
+        // Add an empty line at the top
+        this.board.unshift(new Array(cols).fill(0));
+      }
+    }
+
+    if (linesCleared > 0) {
+      this.score += this.calculateScore(linesCleared);
+      this.linesCleared += linesCleared; // Update the linesCleared field here
+      this.level = Math.floor(this.linesCleared / 10) + 1;
+      this.dropInterval = 1000 - (this.level - 1) * 100;
+    }
+  }
+}
+If the linesCleared field still doesn't update, it might be a problem with how the game state is displayed on the screen. You may need to make sure the UI properly displays the updated linesCleared value.
+
+
+
+
+Takeshi Hagikura
+linesCleared is updated, but it's not reflected in the html. Can you add drawLinesCleared method?
+Sure! You can add a drawLinesCleared method to the Game class to display the number of lines cleared on the screen. You'll also need to call this method in the draw method to make sure it's updated every frame. Here's the updated code:
+
+javascript
+Copy code
+class Game {
+  // ...
+
+  drawLinesCleared() {
+    const linesClearedElement = document.getElementById("linesCleared");
+    linesClearedElement.textContent = `Lines Cleared: ${this.linesCleared}`;
+  }
+
+  draw() {
+    // Clear the canvas
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw the game board
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (this.board[y][x]) {
+          ctx.fillStyle = this.board[y][x];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+          ctx.strokeStyle = "black";
+          ctx.strokeRect(x * scale, y * scale, scale, scale);
+        }
+      }
+    }
+
+    // Draw the current tetrimino
+    this.currentTetrimino.draw();
+
+    // Draw the lines cleared
+    this.drawLinesCleared();
+  }
+}
+And in your HTML, you should have an element with the id linesCleared where the text content will be updated:
+
+html
+Copy code
+<div id="linesCleared">Lines Cleared: 0</div>
+Now, the linesCleared value should be displayed and updated on the screen as you clear lines in the game.
