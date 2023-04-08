@@ -1,5 +1,8 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const nextTetriminoCanvas = document.getElementById("nextTetriminoCanvas");
+const nextTetriminoCtx = nextTetriminoCanvas.getContext("2d");
+
 const scale = 20;
 const rows = canvas.height / scale;
 const cols = canvas.width / scale;
@@ -209,6 +212,16 @@ const shapes = [
   ],
 ];
 
+const tetriminoColors = [
+  "cyan",    // I-shape
+  "blue",    // J-shape
+  "orange",  // L-shape
+  "yellow",  // O-shape
+  "lime",    // S-shape
+  "purple",  // T-shape
+  "red"      // Z-shape
+];
+
         
 class Game {
   constructor() {
@@ -228,8 +241,26 @@ class Game {
 
   createRandomTetrimino() {
     const shapeIndex = Math.floor(Math.random() * shapes.length);
-    const color = `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, 1)`;
-    return new Tetrimino(shapes[shapeIndex], color, this); // Pass the Game instance to the Tetrimino
+    const color = tetriminoColors[shapeIndex];
+    return new Tetrimino(shapes[shapeIndex], color, this);
+  }
+
+  drawNextTetrimino() {
+    // Clear the next tetrimino canvas
+    nextTetriminoCtx.fillStyle = "black";
+    nextTetriminoCtx.fillRect(0, 0, nextTetriminoCanvas.width, nextTetriminoCanvas.height);
+
+    // Draw the next tetrimino
+    this.nextTetrimino.shape.forEach((row, y) => {
+      row.forEach((value, x) => {
+        if (value) {
+          nextTetriminoCtx.fillStyle = this.nextTetrimino.color;
+          nextTetriminoCtx.fillRect(x * scale, y * scale, scale, scale);
+          nextTetriminoCtx.strokeStyle = "black";
+          nextTetriminoCtx.strokeRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
   }
 
   moveTetrimino(dirX, dirY) {
@@ -393,6 +424,7 @@ class Game {
   
     // Draw the current tetrimino
     this.currentTetrimino.draw();
+    this.drawNextTetrimino();
     
     // Draw the score and lines cleared
     this.drawScore();
