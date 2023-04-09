@@ -254,12 +254,19 @@ class Game {
     this.board = this.createBoard();
     this.score = 0;
     this.level = 1;
+    this.gameOver = true;
     this.linesCleared = 0;
     this.dropCounter = 0;
     this.dropInterval = 1000;
     this.currentTetrimino = this.createRandomTetrimino();
     this.nextTetrimino = this.createRandomTetrimino();
     this.isLineClearing = false;
+  }
+
+  start() {
+    this.gameOver = false;
+    gameLoop();
+    this.playBackgroundMusic();
   }
 
   createBoard() {
@@ -369,20 +376,27 @@ class Game {
     }
   }
 
+  playLineClearSound() {
+    const lineClearSound = new Audio("line_clear.wav");
+    lineClearSound.volume = 0.5;
+    lineClearSound.play();
+  }
+
   async clearLines() {
     let linesCleared = 0;
     const fullLines = [];
-  
+
     for (let y = 0; y < rows; y++) {
       const isLineFull = this.board[y].every(cell => cell !== 0);
-  
+
       if (isLineFull) {
         linesCleared++;
         fullLines.push({ y, originalColors: [...this.board[y]] });
       }
     }
-  
+
     if (linesCleared > 0) {
+      this.playLineClearSound();
       for (let i = 0; i < 5; i++) {
         fullLines.forEach(({ y, originalColors }) => {
           this.board[y] = i % 2 === 0 ? originalColors : new Array(cols).fill(0);
@@ -390,15 +404,15 @@ class Game {
         this.draw();
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-  
+
       fullLines.forEach(({ y }) => {
         this.board.splice(y, 1);
         this.board.unshift(new Array(cols).fill(0));
       });
-  
+
       this.score += this.calculateScore(linesCleared);
       this.linesCleared += linesCleared;
-      this.level = Math.floor(this.linesCleared / 10) + 1;
+      this.level = Math.floor((this.linesCleared - 1) / 10) + 1;
       this.dropInterval = 1000 - (this.level - 1) * 100;
     }
   }
@@ -446,7 +460,8 @@ class Game {
   }
 
   update(deltaTime) {
-    this.dropCounter += deltaTime;
+    this.dropCounter += deltaTime || 0;
+
     if (this.dropCounter > this.dropInterval) {
       this.moveTetrimino(0, 1);
       this.dropCounter = 0;
@@ -511,6 +526,7 @@ class Game {
     this.drawScore();
     // Draw the lines cleared
     this.drawLinesCleared();
+    this.drawLevel();
   }
 
   getGhostPosition() {
@@ -563,21 +579,27 @@ function handleKeyPress(event) {
 }
 
 function gameLoop(currentTime) {
-  // Calculate the time elapsed since the last frame
-  const deltaTime = currentTime - lastTime;
-  lastTime = currentTime;
+  if (!game.gameOver) {
+    // Calculate the time elapsed since the last frame
+    const deltaTime = currentTime - lastTime;
+    lastTime = currentTime;
 
-  // Update the game state
-  game.update(deltaTime);
+    // Update the game state
+    game.update(deltaTime);
 
-  // Clear the canvas and draw the updated game state
-  game.draw();
+    // Clear the canvas and draw the updated game state
+    game.draw();
 
-  // Request the next animation frame and call the gameLoop function
-  requestAnimationFrame(gameLoop);
+    // Request the next animation frame and call the gameLoop function
+    requestAnimationFrame(gameLoop);
+  }
 }
 
 document.addEventListener("keydown", handleKeyPress);
-window.onload = function() {
-  requestAnimationFrame(gameLoop);
-}
+document.getElementById('start-game').addEventListener('click', () => {
+  // Hide the title screen
+  document.getElementById('title-screen').style.display = 'none';
+
+  // Start the game
+  game.start();
+});
