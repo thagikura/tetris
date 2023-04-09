@@ -370,32 +370,36 @@ class Game {
   }
 
   async clearLines() {
-    let linesToClear = [];
-
+    let linesCleared = 0;
+    const fullLines = [];
+  
     for (let y = 0; y < rows; y++) {
       const isLineFull = this.board[y].every(cell => cell !== 0);
-
+  
       if (isLineFull) {
-        linesToClear.push(y);
+        linesCleared++;
+        fullLines.push({ y, originalColors: [...this.board[y]] });
       }
     }
-
-    if (linesToClear.length > 0) {
-      this.isLineClearing = true;
-      await this.animateLineClear(linesToClear);
-      this.removeLines(linesToClear);
-
-      this.score += this.calculateScore(linesToClear.length);
-      this.linesCleared += linesToClear.length;
-      const previousLevel = this.level;
-      this.level = Math.floor(this.linesCleared / 10) + 1;
-
-      if (previousLevel !== this.level) {
-        this.dropInterval = this.dropInterval * 0.8; // 20% faster
-        this.drawLevel(); // Update the level display
+  
+    if (linesCleared > 0) {
+      for (let i = 0; i < 5; i++) {
+        fullLines.forEach(({ y, originalColors }) => {
+          this.board[y] = i % 2 === 0 ? originalColors : new Array(cols).fill(0);
+        });
+        this.draw();
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
-
-      this.isLineClearing = false;
+  
+      fullLines.forEach(({ y }) => {
+        this.board.splice(y, 1);
+        this.board.unshift(new Array(cols).fill(0));
+      });
+  
+      this.score += this.calculateScore(linesCleared);
+      this.linesCleared += linesCleared;
+      this.level = Math.floor(this.linesCleared / 10) + 1;
+      this.dropInterval = 1000 - (this.level - 1) * 100;
     }
   }
 
