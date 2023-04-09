@@ -7,6 +7,7 @@ const scale = 20;
 const rows = canvas.height / scale;
 const cols = canvas.width / scale;
 let lastTime = 0;
+let musicStarted = false;
 
 
 class Tetrimino {
@@ -41,7 +42,7 @@ class Tetrimino {
       });
     });
   }
-  
+
   move(dirX, dirY) {
     this.position.x += dirX;
     this.position.y += dirY;
@@ -77,6 +78,31 @@ class Tetrimino {
       }
     }
     return true;
+  }
+
+  drawGhost(ghostPosition) {
+    ctx.globalAlpha = 0.5; // Make the ghost tetrimino transparent
+    this.shape.forEach((row, y) => {
+      row.forEach((value, x) => {
+        if (value) {
+          ctx.fillStyle = this.color;
+          ctx.fillRect(
+            (ghostPosition.x + x) * scale,
+            (ghostPosition.y + y) * scale,
+            scale,
+            scale
+          );
+          ctx.strokeStyle = "black";
+          ctx.strokeRect(
+            (ghostPosition.x + x) * scale,
+            (ghostPosition.y + y) * scale,
+            scale,
+            scale
+          );
+        }
+      });
+    });
+    ctx.globalAlpha = 1; // Reset transparency
   }
 
 }
@@ -222,7 +248,7 @@ const tetriminoColors = [
   "red"      // Z-shape
 ];
 
-        
+
 class Game {
   constructor() {
     this.board = this.createBoard();
@@ -233,6 +259,7 @@ class Game {
     this.dropInterval = 1000;
     this.currentTetrimino = this.createRandomTetrimino();
     this.nextTetrimino = this.createRandomTetrimino();
+    this.isLineClearing = false;
   }
 
   createBoard() {
@@ -291,7 +318,7 @@ class Game {
     this.currentTetrimino = this.nextTetrimino;
     this.nextTetrimino = this.createRandomTetrimino();
     this.currentTetrimino.position = { x: Math.floor(cols / 2) - 1, y: 0 };
-  
+
     // Check for game over
     if (!this.isValidMove(this.currentTetrimino.position, this.currentTetrimino.shape)) {
       this.gameOver();
@@ -342,29 +369,64 @@ class Game {
     }
   }
 
-  clearLines() {
-    let linesCleared = 0;
+  async clearLines() {
+    let linesToClear = [];
 
     for (let y = 0; y < rows; y++) {
       const isLineFull = this.board[y].every(cell => cell !== 0);
 
       if (isLineFull) {
-        linesCleared++;
-
-        // Remove the full line
-        this.board.splice(y, 1);
-
-        // Add an empty line at the top
-        this.board.unshift(new Array(cols).fill(0));
+        linesToClear.push(y);
       }
     }
 
-    if (linesCleared > 0) {
-      this.score += this.calculateScore(linesCleared);
-      this.linesCleared += linesCleared;
+    if (linesToClear.length > 0) {
+      this.isLineClearing = true;
+      await this.animateLineClear(linesToClear);
+      this.removeLines(linesToClear);
+
+      this.score += this.calculateScore(linesToClear.length);
+      this.linesCleared += linesToClear.length;
+      const previousLevel = this.level;
       this.level = Math.floor(this.linesCleared / 10) + 1;
-      this.dropInterval = 1000 - (this.level - 1) * 100;
-      this.drawScore();
+
+      if (previousLevel !== this.level) {
+        this.dropInterval = this.dropInterval * 0.8; // 20% faster
+        this.drawLevel(); // Update the level display
+      }
+
+      this.isLineClearing = false;
+    }
+  }
+
+  async animateLineClear(linesToClear) {
+    const blinkCount = 3;
+    const blinkInterval = 150;
+
+    for (let i = 0; i < blinkCount; i++) {
+      // Clear the lines
+      for (const y of linesToClear) {
+        this.board[y].fill(0);
+      }
+      this.draw();
+      await new Promise(resolve => setTimeout(resolve, blinkInterval));
+
+      // Restore the lines
+      for (const y of linesToClear) {
+        this.board[y].fill(1);
+      }
+      this.draw();
+      await new Promise(resolve => setTimeout(resolve, blinkInterval));
+    }
+  }
+
+  removeLines(linesToClear) {
+    for (const y of linesToClear) {
+      // Remove the full line
+      this.board.splice(y, 1);
+
+      // Add an empty line at the top
+      this.board.unshift(new Array(cols).fill(0));
     }
   }
 
@@ -387,6 +449,12 @@ class Game {
     }
   }
 
+  playBackgroundMusic() {
+    const backgroundMusic = document.getElementById("background-music");
+    backgroundMusic.volume = 0.5; // Adjust the volume (0 to 1)
+    backgroundMusic.play();
+  }
+
   drawScore() {
     const scoreElement = document.getElementById("score");
     const linesElement = document.getElementById("lines");
@@ -405,11 +473,16 @@ class Game {
     linesClearedElement.textContent = `Lines Cleared: ${this.linesCleared}`;
   }
 
+  drawLevel() {
+    const levelDisplay = document.getElementById("level-display");
+    levelDisplay.textContent = `Level: ${this.level}`;
+  }
+
   draw() {
     // Clear the canvas
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
+
     // Draw the game board
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
@@ -421,20 +494,35 @@ class Game {
         }
       }
     }
-  
+
+    // Draw the ghost tetrimino
+    const ghostPosition = this.getGhostPosition();
+    this.currentTetrimino.drawGhost(ghostPosition);
+
     // Draw the current tetrimino
     this.currentTetrimino.draw();
     this.drawNextTetrimino();
-    
+
     // Draw the score and lines cleared
     this.drawScore();
     // Draw the lines cleared
     this.drawLinesCleared();
   }
 
+  getGhostPosition() {
+    let ghostPosition = { x: this.currentTetrimino.position.x, y: this.currentTetrimino.position.y };
+
+    while (this.isValidMove({ x: ghostPosition.x, y: ghostPosition.y + 1 }, this.currentTetrimino.shape)) {
+      ghostPosition.y++;
+    }
+
+    return ghostPosition;
+  }
+
 }
 
 const game = new Game();
+game.playBackgroundMusic();
 
 function update(deltaTime) {
   game.update(deltaTime);
@@ -447,6 +535,11 @@ function draw() {
 }
 
 function handleKeyPress(event) {
+  if (!musicStarted) {
+    game.playBackgroundMusic();
+    musicStarted = true;
+  }
+
   const key = event.keyCode;
 
   switch (key) {
@@ -481,4 +574,6 @@ function gameLoop(currentTime) {
 }
 
 document.addEventListener("keydown", handleKeyPress);
-requestAnimationFrame(gameLoop);
+window.onload = function() {
+  requestAnimationFrame(gameLoop);
+}
